@@ -9,6 +9,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,15 +21,26 @@ import androidx.core.view.WindowInsetsCompat;
 
 import org.w3c.dom.Text;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
+import java.net.UnknownServiceException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -165,7 +177,51 @@ public class MainActivity extends AppCompatActivity {
         return ip;
     }
 
+
+
+    public void connect(View view) {
+        EditText et = findViewById(R.id.urlEditText);
+        String address = et.getText().toString();
+        String json = "{\n" +
+                "    \"name\": \"john\",\n" +
+                "    \"number\": \"Hello there\"\n" +
+                "}";
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // http://192.168.40.117:8000/connect
+                try {
+                    URL url = new URL(address);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setDoOutput(true);
+                    connection.setRequestProperty("Accept-Charset", "UTF-8");
+                    connection.setRequestProperty("Content-type", "application/json");
+
+                    // Write to the connection
+                    OutputStream output = connection.getOutputStream();
+                    output.write(json.getBytes(StandardCharsets.UTF_8));
+                    output.close();
+
+                    int status = connection.getResponseCode();
+                    Log.d(TAG, "run: " + status);
+                } catch (MalformedURLException e) {
+                    Log.d(TAG, "connect: m: " + e.getMessage());
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    Log.d(TAG, "connect: io: " + e.getMessage());
+                    throw new RuntimeException(e);
+                }
+
+                Log.d(TAG, "run: finish");
+            }
+        });
+
+        t.start();
+    }
+
     String tag = "===sessionLogging===";
+    String TAG = tag;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

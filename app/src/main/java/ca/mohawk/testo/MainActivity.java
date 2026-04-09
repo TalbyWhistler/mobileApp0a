@@ -36,14 +36,14 @@ public class MainActivity extends AppCompatActivity {
 
     private class HttpServerThread extends Thread {
         ServerSocket httpServerSocket;
-        static final int HttpServerPORT = 8888;
+        final static int PORT = 8888;
 
         @Override
         public void run() {
             Socket socket = null;
 
             try {
-                httpServerSocket = new ServerSocket(HttpServerPORT);
+                httpServerSocket = new ServerSocket(PORT);
 
                 while(true){
                     socket = httpServerSocket.accept();
@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private class HttpResponseThread extends Thread {
+    public class HttpResponseThread extends Thread {
         Socket socket;
         String h1;
 
@@ -84,8 +84,8 @@ public class MainActivity extends AppCompatActivity {
 
                 int contentLength = -1;
                 try {
-
-                    contentLength = Integer.parseInt(request.split(":")[1].substring(1));
+                    contentLength = Integer.parseInt(request.split(":")[1]
+                            .substring(1));
                 } catch (NumberFormatException e) {
 
                 }
@@ -93,32 +93,33 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                char buf[] = new char[contentLength + 2];
+                char[] buf = new char[contentLength + 2];
                 is.read(buf, 0, contentLength + 2);
 
                 String body = new String(buf);
                 Log.d(tag, "run body: " + body);
 
-
-                // add body to list
                 JSONObject jsonObject = new JSONObject(body);
                 String extractedMessage = jsonObject.getString("message");
-                String extractedName = "Test Name"; // Would get name if it existed
-                // check if the sender already exists, if they do add message to their list,
-                // if they don't make new sender
-                boolean senderExists = false;
-                for (ListItem item : messagesReceived) {
-                    if (item.getSender().equalsIgnoreCase(extractedName)) {
-                        int index = messagesReceived.indexOf(item);
-                        messagesReceived.get(index).addMessage(1,extractedMessage);
-                        senderExists = true;
-                    }
-                }
-                if (senderExists == false) {
-                    ListItem li = new ListItem(extractedName, extractedMessage);
-                    messagesReceived.add(li);
-                }
+                String extractedName = jsonObject.getString("sender");
 
+                MainActivity.this.runOnUiThread(() -> {
+                    // add body to list
+                    // check if the sender already exists, if they do add message to their list,
+                    // if they don't make new sender
+                    boolean senderExists = false;
+                    for (ListItem item : messagesReceived) {
+                        if (item.getSender().equalsIgnoreCase(extractedName)) {
+                            int index = messagesReceived.indexOf(item);
+                            messagesReceived.get(index).addMessage(1,extractedMessage);
+                            senderExists = true;
+                        }
+                    }
+                    if (!senderExists) {
+                        ListItem li = new ListItem(extractedName, extractedMessage);
+                        messagesReceived.add(li);
+                    }
+                });
 
                 os = new PrintWriter(socket.getOutputStream(), true);
 
@@ -135,12 +136,6 @@ public class MainActivity extends AppCompatActivity {
                 os.print(response + "\r\n");
                 os.close();
                 socket.close();
-
-                MainActivity.this.runOnUiThread(() -> {
-                    MainActivity _this = MainActivity.context;
-                    TextView url = _this.findViewById(R.id.urlTextView);
-                    url.setText(body);
-                });
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -166,7 +161,10 @@ public class MainActivity extends AppCompatActivity {
                     if (inetAddress.isSiteLocalAddress()) {
                         Log.d(tag, "getIpAddress: " + inetAddress.getHostAddress());
                         ip = inetAddress.getHostAddress();
-                        break;
+                        if (ip.contains(":")) {
+                            ip = "localhost";
+                        }
+                        Log.d(TAG, "getIpAddress: ip: " + ip);
                     }
 
                 }
@@ -183,12 +181,20 @@ public class MainActivity extends AppCompatActivity {
 
     public void connect(View view) {
         EditText et = findViewById(R.id.urlEditText);
+        EditText nameEt = findViewById(R.id.phoneNameEditText);
+
         String serverAddress = et.getText().toString();
-        String json = "{" +
-                "    \"name\": \"john\"," +
-                "    \"number\": \"Hello there\"," +
-                "    \"address\": \"" + address + "\"" +
-                "}";
+        String name = nameEt.getText().toString();
+
+        JSONObject json = new JSONObject();
+        try {
+            json.put("name", name);
+            json.put("number", "-");
+            json.put("address", address);
+        } catch (JSONException e) {
+            Log.d(TAG, "connect: " + e.getMessage());
+            return;
+        }
 
         Thread t = new Thread(() -> {
             // http://192.168.40.117:8000/connect
@@ -201,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // Write to the connection
                 OutputStream output = connection.getOutputStream();
-                output.write(json.getBytes(StandardCharsets.UTF_8));
+                output.write(json.toString().getBytes(StandardCharsets.UTF_8));
                 output.close();
 
                 int status = connection.getResponseCode();
@@ -228,7 +234,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         if (address == null) {
-            address = getIpAddress() + ":" + HttpServerThread.HttpServerPORT;
+            address = getIpAddress() + ":" + HttpServerThread.PORT;
         }
 
         context = this;

@@ -1,6 +1,9 @@
 package ca.mohawk.testo;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -30,9 +33,17 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 
 public class MainActivity extends AppCompatActivity {
+    public static String phoneAddress;
+    public static String desktopAddress;
+
     public static MainActivity context;
-    private static String address;
     public static ArrayList<ListItem> messagesReceived = new ArrayList<>();
+
+    public static final String SHARED_PREF = "filmfone_data";
+    public static final String DESKTOP_MANAGER_ADDRESS = "desktop_manager_address";
+
+    public static HttpServerThread server;
+    public static boolean firstRun = true;
 
     private class HttpServerThread extends Thread {
         ServerSocket httpServerSocket;
@@ -185,18 +196,15 @@ public class MainActivity extends AppCompatActivity {
         return ip;
     }
 
-    public void connect(View view) {
-        EditText et = findViewById(R.id.urlEditText);
+    private void connect() {
         EditText nameEt = findViewById(R.id.phoneNameEditText);
-
-        String serverAddress = et.getText().toString();
         String name = nameEt.getText().toString();
 
         JSONObject json = new JSONObject();
         try {
             json.put("name", name);
             json.put("number", "-");
-            json.put("address", address);
+            json.put("address", phoneAddress);
         } catch (JSONException e) {
             Log.d(TAG, "connect: " + e.getMessage());
             return;
@@ -207,7 +215,8 @@ public class MainActivity extends AppCompatActivity {
         Thread t = new Thread(() -> {
             // http://192.168.40.18:8000/connect
             try {
-                URL url = new URL(serverAddress);
+                Log.d(TAG, "connect: ");
+                URL url = new URL(desktopAddress + "/connect");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 Log.d(TAG, "connect: open");
                 connection.setDoOutput(true);
@@ -243,18 +252,47 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.d(TAG, "onCreate");
 
-        if (address == null) {
-            address = getIpAddress() + ":" + HttpServerThread.PORT;
+        if (phoneAddress == null) {
+            phoneAddress = getIpAddress() + ":" + HttpServerThread.PORT;
         }
+
+        SharedPreferences sp = getSharedPreferences(SHARED_PREF, Context.MODE_PRIVATE);
 
         context = this;
 
-        HttpServerThread httpServerThread = new HttpServerThread();
-        httpServerThread.start();
+        Intent intent = getIntent();
+        Uri data = intent.getData();
+
+        if (data != null) {
+            Log.d(TAG, "onCreate: " + data.toString());
+            SharedPreferences.Editor editor = sp.edit();
+            String address = data.getQueryParameter("address");
+            if (address == null) {
+                throw new IllegalStateException("Invalid navigation uri");
+            }
+
+            editor.putString(DESKTOP_MANAGER_ADDRESS, address);
+            editor.apply();
+            desktopAddress = address;
+        } else {
+            desktopAddress = sp.getString(DESKTOP_MANAGER_ADDRESS, "");
+        }
+
+        if (desktopAddress.isEmpty()) {
+            return;
+        }
+
+        if (firstRun) {
+            firstRun = false;
+            server = new HttpServerThread();
+            server.start();
+            connect();
+        }
 
         TextView urlTextView = findViewById(R.id.urlTextView);
-        urlTextView.setText(address);
+        urlTextView.setText(phoneAddress);
 
         Log.d(tag,"onCreate");
     }

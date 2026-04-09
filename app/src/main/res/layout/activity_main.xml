@@ -100,6 +100,7 @@
         android:ems="10"
         android:hint="Phone Name"
         android:inputType="text"
+        android:text="John"
         android:textColor="@color/white"
         app:layout_constraintBottom_toBottomOf="@+id/urlEditText"
         app:layout_constraintEnd_toEndOf="parent"

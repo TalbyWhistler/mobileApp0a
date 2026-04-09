@@ -107,10 +107,11 @@ public class MainActivity extends AppCompatActivity {
                     // add body to list
                     // check if the sender already exists, if they do add message to their list,
                     // if they don't make new sender
+                    int index = 0;
                     boolean senderExists = false;
                     for (ListItem item : messagesReceived) {
                         if (item.getSender().equalsIgnoreCase(extractedName)) {
-                            int index = messagesReceived.indexOf(item);
+                            index = messagesReceived.indexOf(item);
                             messagesReceived.get(index).addMessage(1,extractedMessage);
                             senderExists = true;
                         }
@@ -119,6 +120,9 @@ public class MainActivity extends AppCompatActivity {
                         ListItem li = new ListItem(extractedName, extractedMessage);
                         messagesReceived.add(li);
                     }
+
+                    MainActivity2.setMessagesAdapter();
+                    MainActivity3.setMessagesAdapter(index);
                 });
 
                 os = new PrintWriter(socket.getOutputStream(), true);
@@ -164,7 +168,9 @@ public class MainActivity extends AppCompatActivity {
                         if (ip.contains(":")) {
                             ip = "localhost";
                         }
+
                         Log.d(TAG, "getIpAddress: ip: " + ip);
+                        return ip;
                     }
 
                 }
@@ -196,19 +202,24 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        Log.d(TAG, "connect: pre thread");
+
         Thread t = new Thread(() -> {
-            // http://192.168.40.117:8000/connect
+            // http://192.168.40.18:8000/connect
             try {
                 URL url = new URL(serverAddress);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                Log.d(TAG, "connect: open");
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Accept-Charset", "UTF-8");
                 connection.setRequestProperty("Content-type", "application/json");
 
                 // Write to the connection
                 OutputStream output = connection.getOutputStream();
+                Log.d(TAG, "connect: outputStream");
                 output.write(json.toString().getBytes(StandardCharsets.UTF_8));
                 output.close();
+                Log.d(TAG, "connect: close");
 
                 int status = connection.getResponseCode();
                 Log.d(TAG, "run: " + status);

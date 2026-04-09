@@ -9,8 +9,17 @@ import android.widget.ListView;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity3 extends AppCompatActivity {
-    String tag = "===loggingTag===";
-    int index;
+    static String tag = "===loggingTag===";
+    static int index;
+    public static MainActivity3 context;
+
+    public static void setMessagesAdapter(int index) {
+        if (context == null) return;
+
+        MessageAdapter adapter = new MessageAdapter(context, MainActivity.messagesReceived.get(index).getMessages());
+        ListView listView = context.findViewById(R.id.listViewItem);
+        listView.setAdapter(adapter);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,14 +27,15 @@ public class MainActivity3 extends AppCompatActivity {
         setContentView(R.layout.activity_main3);
         ListView listView = findViewById(R.id.listViewItem);
 
-        // get the index passed from MainActivity
+        context = this;
+
+        // get the index passed from MainActivity2
         index = getIntent().getIntExtra("ITEM_INDEX", 0);
         MessageAdapter adapter = new MessageAdapter(this, MainActivity.messagesReceived.get(index).getMessages());
         listView.setAdapter(adapter);
 
         // To show the newest (bottom) entry automatically:
         listView.setSelection(adapter.getCount() - 1);
-
     }
 
     public void sendButton(View view)

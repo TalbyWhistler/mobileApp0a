@@ -11,13 +11,25 @@ import android.widget.ListView;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity2 extends AppCompatActivity {
-    String tag = "==sessionLogger==";
+    public static MainActivity2 context;
+    static String tag = "==sessionLogger==";
+
+    public static void setMessagesAdapter() {
+        ArrayAdapter<ListItem> adapter = new MyListAdapter(MainActivity2.context, 0, MainActivity.messagesReceived);
+        Log.d(tag, "adapter = " + adapter);
+        Log.d(tag, "adapter getCount() = " + adapter.getCount());
+        ListView randList = context.findViewById(R.id.listView);
+        randList.setAdapter(adapter);
+        randList.setOnItemClickListener(context::onItemClick);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main2);
         Log.d(tag,"onCreate");
+        context = this;
 
         ArrayAdapter<ListItem> adapter = new MyListAdapter(MainActivity2.this, 0, MainActivity.messagesReceived);
         Log.d(tag, "adapter = " + adapter);

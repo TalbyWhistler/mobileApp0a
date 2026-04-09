@@ -15,6 +15,8 @@ public class MainActivity2 extends AppCompatActivity {
     static String tag = "==sessionLogger==";
 
     public static void setMessagesAdapter() {
+        if (context == null) return;
+
         ArrayAdapter<ListItem> adapter = new MyListAdapter(MainActivity2.context, 0, MainActivity.messagesReceived);
         Log.d(tag, "adapter = " + adapter);
         Log.d(tag, "adapter getCount() = " + adapter.getCount());

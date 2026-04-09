@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 httpServerSocket = new ServerSocket(PORT);
 
-                while(true){
+                while (true) {
                     socket = httpServerSocket.accept();
 
                     HttpResponseThread httpResponseThread =
@@ -72,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
 
     public class HttpResponseThread extends Thread {
         Socket socket;
-        String h1;
 
         HttpResponseThread(Socket socket){
             this.socket = socket;
@@ -93,14 +92,19 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(tag, "run: " + request);
                 }
 
-                int contentLength = -1;
+                int contentLength;
+
                 try {
+                    assert request != null;
                     contentLength = Integer.parseInt(request.split(":")[1]
                             .substring(1));
                 } catch (NumberFormatException e) {
-
+                    Log.d(TAG, "run: content length: " + e.getMessage());
+                    return;
                 }
+
                 if (contentLength <= 0) {
+                    Log.d(TAG, "run: no content");
                     return;
                 }
 
@@ -114,50 +118,58 @@ public class MainActivity extends AppCompatActivity {
                 String extractedMessage = jsonObject.getString("message");
                 String extractedName = jsonObject.getString("sender");
 
-                MainActivity.this.runOnUiThread(() -> {
-                    // add body to list
-                    // check if the sender already exists, if they do add message to their list,
-                    // if they don't make new sender
-                    int index = 0;
-                    boolean senderExists = false;
-                    for (ListItem item : messagesReceived) {
-                        if (item.getSender().equalsIgnoreCase(extractedName)) {
-                            index = messagesReceived.indexOf(item);
-                            messagesReceived.get(index).addMessage(1,extractedMessage);
-                            senderExists = true;
-                        }
-                    }
-                    if (!senderExists) {
-                        ListItem li = new ListItem(extractedName, extractedMessage);
-                        messagesReceived.add(li);
-                    }
-
-                    MainActivity2.setMessagesAdapter();
-                    MainActivity3.setMessagesAdapter(index);
-                });
+                MainActivity.this.runOnUiThread(() ->
+                    appendMessage(extractedMessage, extractedName)
+                );
 
                 os = new PrintWriter(socket.getOutputStream(), true);
 
-                String response =
-                        "<html><head></head>" +
-                                "<body>" +
-                                "<h1>" + h1 + "</h1>" +
-                                "</body></html>";
+                String response = "{\"status\": \"Message received\"}";
 
                 os.print("HTTP/1.1 200" + "\r\n");
-                os.print("Content-Type: text/html" + "\r\n");
+                os.print("Content-Type: text/json" + "\r\n");
                 os.print("Content-Length: " + response.length() + "\r\n");
                 os.print("\r\n");
                 os.print(response + "\r\n");
                 os.close();
-                socket.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                Log.d(TAG, "run: io: " + e.getMessage());
             } catch (JSONException e) {
+                Log.d(TAG, "run: json: " + e.getMessage());
                 throw new RuntimeException(e);
+            } finally {
+                try {
+                    if (socket != null) {
+                        Log.d(TAG, "run: socket close");
+                        socket.close();
+                    }
+                } catch (IOException e) {
+                    Log.d(TAG, "run: io after request: " + e.getMessage());
+                }
             }
         }
+    }
+
+    private void appendMessage(String extractedMessage, String extractedName) {
+        // add body to list
+        // check if the sender already exists, if they do add message to their list,
+        // if they don't make new sender
+        int index = 0;
+        boolean senderExists = false;
+        for (ListItem item : messagesReceived) {
+            if (item.getSender().equalsIgnoreCase(extractedName)) {
+                index = messagesReceived.indexOf(item);
+                messagesReceived.get(index).addMessage(1,extractedMessage);
+                senderExists = true;
+            }
+        }
+        if (!senderExists) {
+            ListItem li = new ListItem(extractedName, extractedMessage);
+            messagesReceived.add(li);
+        }
+
+        MainActivity2.setMessagesAdapter();
+        MainActivity3.setMessagesAdapter(index);
     }
 
     private String getIpAddress() {
@@ -281,6 +293,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (desktopAddress.isEmpty()) {
+            Log.d(TAG, "onCreate: desktop address empty");
             return;
         }
 

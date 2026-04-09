@@ -49,6 +49,7 @@ import java.util.Enumeration;
 
 public class MainActivity extends AppCompatActivity {
     public static MainActivity context;
+    private static String address;
 
     private class HttpServerThread extends Thread {
         ServerSocket httpServerSocket;
@@ -96,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
                 while (request != null && !request.contains("Content-Length")) {
                     request = is.readLine();
                     Log.d(tag, "run: " + request);
-
                 }
 
                 int contentLength = -1;
@@ -124,12 +124,12 @@ public class MainActivity extends AppCompatActivity {
                                 "<h1>" + h1 + "</h1>" +
                                 "</body></html>";
 
-                os.print("HTTP/1.0 200" + "\r\n");
-                os.print("Content type: text/html" + "\r\n");
-                os.print("Content length: " + response.length() + "\r\n");
+                os.print("HTTP/1.1 200" + "\r\n");
+                os.print("Content-Type: text/html" + "\r\n");
+                os.print("Content-Length: " + response.length() + "\r\n");
                 os.print("\r\n");
-                os.print(body + "\r\n");
-                os.flush();
+                os.print(response + "\r\n");
+                os.close();
                 socket.close();
 
                 MainActivity.this.runOnUiThread(() -> {
@@ -141,8 +141,6 @@ public class MainActivity extends AppCompatActivity {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-
-            return;
         }
     }
 
@@ -161,8 +159,8 @@ public class MainActivity extends AppCompatActivity {
 
                     if (inetAddress.isSiteLocalAddress()) {
                         Log.d(tag, "getIpAddress: " + inetAddress.getHostAddress());
-                        ip += "SiteLocalAddress: "
-                                + inetAddress.getHostAddress() + "\n";
+                        ip = inetAddress.getHostAddress();
+                        break;
                     }
 
                 }
@@ -177,44 +175,40 @@ public class MainActivity extends AppCompatActivity {
         return ip;
     }
 
-
-
     public void connect(View view) {
         EditText et = findViewById(R.id.urlEditText);
-        String address = et.getText().toString();
-        String json = "{\n" +
-                "    \"name\": \"john\",\n" +
-                "    \"number\": \"Hello there\"\n" +
+        String serverAddress = et.getText().toString();
+        String json = "{" +
+                "    \"name\": \"john\"," +
+                "    \"number\": \"Hello there\"," +
+                "    \"address\": \"" + address + "\"" +
                 "}";
 
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                // http://192.168.40.117:8000/connect
-                try {
-                    URL url = new URL(address);
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setDoOutput(true);
-                    connection.setRequestProperty("Accept-Charset", "UTF-8");
-                    connection.setRequestProperty("Content-type", "application/json");
+        Thread t = new Thread(() -> {
+            // http://192.168.40.117:8000/connect
+            try {
+                URL url = new URL(serverAddress);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Accept-Charset", "UTF-8");
+                connection.setRequestProperty("Content-type", "application/json");
 
-                    // Write to the connection
-                    OutputStream output = connection.getOutputStream();
-                    output.write(json.getBytes(StandardCharsets.UTF_8));
-                    output.close();
+                // Write to the connection
+                OutputStream output = connection.getOutputStream();
+                output.write(json.getBytes(StandardCharsets.UTF_8));
+                output.close();
 
-                    int status = connection.getResponseCode();
-                    Log.d(TAG, "run: " + status);
-                } catch (MalformedURLException e) {
-                    Log.d(TAG, "connect: m: " + e.getMessage());
-                    throw new RuntimeException(e);
-                } catch (IOException e) {
-                    Log.d(TAG, "connect: io: " + e.getMessage());
-                    throw new RuntimeException(e);
-                }
-
-                Log.d(TAG, "run: finish");
+                int status = connection.getResponseCode();
+                Log.d(TAG, "run: " + status);
+            } catch (MalformedURLException e) {
+                Log.d(TAG, "connect: m: " + e.getMessage());
+            } catch (IOException e) {
+                Log.d(TAG, "connect: io: " + e.getMessage());
+            } catch (Exception e) {
+                Log.d(TAG, "connect: other: " + e.getMessage());
             }
+
+            Log.d(TAG, "run: finish");
         });
 
         t.start();
@@ -227,13 +221,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (address == null) {
+            address = getIpAddress() + ":" + HttpServerThread.HttpServerPORT;
+        }
+
         context = this;
 
         HttpServerThread httpServerThread = new HttpServerThread();
         httpServerThread.start();
 
         TextView urlTextView = findViewById(R.id.urlTextView);
-        urlTextView.setText(getIpAddress() + ":" + HttpServerThread.HttpServerPORT + "\n");
+        urlTextView.setText(address);
 
         Log.d(tag,"onCreate");
         appendTime();

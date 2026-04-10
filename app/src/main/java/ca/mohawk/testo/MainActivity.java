@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -34,6 +35,7 @@ import java.util.Enumeration;
 
 public class MainActivity extends AppCompatActivity {
     public static String phoneAddress;
+    public static String phoneName;
     public static String desktopAddress;
 
     public static MainActivity context;
@@ -41,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String SHARED_PREF = "filmfone_data";
     public static final String DESKTOP_MANAGER_ADDRESS = "desktop_manager_address";
+    public static final String PHONE_NAME = "phone_name";
 
     public static HttpServerThread server;
     public static boolean firstRun = true;
@@ -208,13 +211,31 @@ public class MainActivity extends AppCompatActivity {
         return ip;
     }
 
-    private void connect() {
+    public void firstConnect(View view) {
         EditText nameEt = findViewById(R.id.phoneNameEditText);
         String name = nameEt.getText().toString();
 
+        if (name.isBlank() || desktopAddress.isBlank()) {
+            Log.d(TAG, "firstConnect: name: " + name);
+            Log.d(TAG, "firstConnect: desktopAddress: " + desktopAddress);
+            Log.d(TAG, "firstConnect: missing name and/or address");
+            return;
+        }
+
+        SharedPreferences sp = getSharedPreferences(SHARED_PREF, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putString(PHONE_NAME, name);
+        editor.apply();
+
+        phoneName = name;
+        connect();
+    }
+
+    private void connect() {
         JSONObject json = new JSONObject();
         try {
-            json.put("name", name);
+            Log.d(TAG, "connect: name: " + phoneName);
+            json.put("name", phoneName);
             json.put("number", "-");
             json.put("address", phoneAddress);
         } catch (JSONException e) {
@@ -225,7 +246,6 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "connect: pre thread");
 
         Thread t = new Thread(() -> {
-            // http://192.168.40.18:8000/connect
             try {
                 Log.d(TAG, "connect: ");
                 URL url = new URL(desktopAddress + "/connect");
@@ -252,10 +272,42 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "connect: other: " + e.getMessage());
             }
 
+            MainActivity.this.runOnUiThread(() -> {
+                EditText et = findViewById(R.id.phoneNameEditText);
+                Button connectButton = findViewById(R.id.connectButton);
+
+                et.setVisibility(View.GONE);
+                connectButton.setVisibility(View.GONE);
+            });
+
             Log.d(TAG, "run: finish");
         });
 
         t.start();
+    }
+
+    protected void onInit() {
+        if (!firstRun) return;
+        firstRun = false;
+        Log.d(TAG, "onInit");
+
+        SharedPreferences sp = getSharedPreferences(SHARED_PREF, Context.MODE_PRIVATE);
+
+        phoneName = sp.getString(PHONE_NAME, "");
+        desktopAddress = sp.getString(DESKTOP_MANAGER_ADDRESS, "");
+
+        server = new HttpServerThread();
+        server.start();
+
+        phoneAddress = getIpAddress() + ":" + HttpServerThread.PORT;
+        if (desktopAddress.isEmpty()) {
+            Log.d(TAG, "onCreate: desktop address empty");
+            return;
+        }
+
+        if (!phoneName.isBlank()) {
+            connect();
+        }
     }
 
     String tag = "===sessionLogging===";
@@ -266,46 +318,35 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Log.d(TAG, "onCreate");
 
-        if (phoneAddress == null) {
-            phoneAddress = getIpAddress() + ":" + HttpServerThread.PORT;
-        }
+        onInit();
 
-        SharedPreferences sp = getSharedPreferences(SHARED_PREF, Context.MODE_PRIVATE);
-
-        context = this;
-
+        // Web link with desktop address
         Intent intent = getIntent();
         Uri data = intent.getData();
 
-        if (data != null) {
-            Log.d(TAG, "onCreate: " + data.toString());
+        if (data != null && desktopAddress.isEmpty()) {
+            SharedPreferences sp = getSharedPreferences(SHARED_PREF, Context.MODE_PRIVATE);
+            Log.d(TAG, "onInit with data: " + data);
             SharedPreferences.Editor editor = sp.edit();
             String address = data.getQueryParameter("address");
             if (address == null) {
                 throw new IllegalStateException("Invalid navigation uri");
             }
 
+            Log.d(TAG, "onInit: query" + address);
             editor.putString(DESKTOP_MANAGER_ADDRESS, address);
             editor.apply();
             desktopAddress = address;
-        } else {
-            desktopAddress = sp.getString(DESKTOP_MANAGER_ADDRESS, "");
         }
 
-        if (desktopAddress.isEmpty()) {
-            Log.d(TAG, "onCreate: desktop address empty");
-            return;
+        EditText et = findViewById(R.id.phoneNameEditText);
+        Button connectButton = findViewById(R.id.connectButton);
+        if (phoneName != null && !phoneName.isBlank()) {
+            et.setVisibility(View.GONE);
+            connectButton.setVisibility(View.GONE);
         }
 
-        if (firstRun) {
-            firstRun = false;
-            server = new HttpServerThread();
-            server.start();
-            connect();
-        }
-
-        TextView urlTextView = findViewById(R.id.urlTextView);
-        urlTextView.setText(phoneAddress);
+        context = this;
 
         Log.d(tag,"onCreate");
     }

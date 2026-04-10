@@ -1,4 +1,4 @@
-package ca.mohawk.testo;
+package ca.mohawk.filmfone;
 
 import android.content.Context;
 import android.content.Intent;
@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -32,6 +31,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
+
 
 public class MainActivity extends AppCompatActivity {
     public static String phoneAddress;

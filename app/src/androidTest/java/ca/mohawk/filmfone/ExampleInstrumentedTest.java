@@ -1,4 +1,4 @@
-package ca.mohawk.testo;
+package ca.mohawk.filmfone;
 
 import android.content.Context;
 
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("ca.mohawk.testo", appContext.getPackageName());
+        assertEquals("ca.mohawk.filmfone", appContext.getPackageName());
     }
 }

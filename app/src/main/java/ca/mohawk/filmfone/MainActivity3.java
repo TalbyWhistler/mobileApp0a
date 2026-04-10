@@ -1,4 +1,4 @@
-package ca.mohawk.testo;
+package ca.mohawk.filmfone;
 
 import android.os.Bundle;
 import android.util.Log;

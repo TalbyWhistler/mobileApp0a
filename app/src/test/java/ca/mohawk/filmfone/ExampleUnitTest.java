@@ -1,4 +1,4 @@
-package ca.mohawk.testo;
+package ca.mohawk.filmfone;
 
 import org.junit.Test;
 

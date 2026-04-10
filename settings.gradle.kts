@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "testo"
+rootProject.name = "filmfone"
 include(":app")

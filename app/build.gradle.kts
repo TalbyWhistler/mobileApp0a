@@ -3,15 +3,15 @@ plugins {
 }
 
 android {
-    namespace = "ca.mohawk.testo"
+    namespace = "ca.mohawk.filmfone"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "ca.mohawk.testo"
+        applicationId = "ca.mohawk.filmfone"
         minSdk = 34
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.00"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -1,4 +1,4 @@
-package ca.mohawk.testo;
+package ca.mohawk.filmfone;
 
 import android.content.Context;
 import android.view.LayoutInflater;
